@@ -3,11 +3,15 @@ import { runMulticaJson } from "../lib/multica-cli.js";
 import type { AutopilotGetResponse } from "../lib/types.js";
 
 export const multicaGetAutopilotSchema = z.object({
-  id: z.string().min(1),
+  autopilot_id: z.string().min(1),
 });
 
 export type MulticaGetAutopilotInput = z.infer<typeof multicaGetAutopilotSchema>;
 
 export async function multicaGetAutopilot(input: MulticaGetAutopilotInput) {
-  return runMulticaJson<AutopilotGetResponse>(["autopilot", "get", input.id]);
+  return runMulticaJson<AutopilotGetResponse>([
+    "autopilot",
+    "get",
+    input.autopilot_id,
+  ]);
 }
