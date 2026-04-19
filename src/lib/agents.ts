@@ -1,6 +1,5 @@
 import { TtlCache } from "./cache.js";
 import { closestMatch } from "./fuzzy.js";
-import { extractModelHint } from "./model-hint.js";
 import { runMulticaJson } from "./multica-cli.js";
 import type { Agent, Runtime } from "./types.js";
 

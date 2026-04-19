@@ -255,8 +255,8 @@ test("resolveIssueId: UUID passthrough — no fetch call", async () => {
 
 test("resolveIssueId: short ID resolves to UUID", async () => {
   const fetcher = async () =>
-    makePage([{ id: OTHER_UUID, identifier: "KOR-123" }]);
-  const result = await resolveIssueId("KOR-123", fetcher);
+    makePage([{ id: OTHER_UUID, identifier: "ABC-123" }]);
+  const result = await resolveIssueId("ABC-123", fetcher);
   assert.equal(result, OTHER_UUID);
 });
 
@@ -270,10 +270,10 @@ test("resolveIssueId: invalid ID format throws", async () => {
 
 test("resolveIssueId: short ID not in list throws", async () => {
   const fetcher = async () =>
-    makePage([{ id: OTHER_UUID, identifier: "KOR-999" }]);
+    makePage([{ id: OTHER_UUID, identifier: "ABC-999" }]);
   await assert.rejects(
-    () => resolveIssueId("KOR-123", fetcher),
-    /Issue "KOR-123" not found/,
+    () => resolveIssueId("ABC-123", fetcher),
+    /Issue "ABC-123" not found/,
   );
 });
 
@@ -281,10 +281,10 @@ test("resolveIssueId: paginates until has_more false", async () => {
   let calls = 0;
   const fetcher = async (offset: number) => {
     calls++;
-    if (offset === 0) return makePage([{ id: "x", identifier: "KOR-000" }], true);
-    return makePage([{ id: OTHER_UUID, identifier: "KOR-123" }], false);
+    if (offset === 0) return makePage([{ id: "x", identifier: "ABC-000" }], true);
+    return makePage([{ id: OTHER_UUID, identifier: "ABC-123" }], false);
   };
-  const result = await resolveIssueId("KOR-123", fetcher);
+  const result = await resolveIssueId("ABC-123", fetcher);
   assert.equal(result, OTHER_UUID);
   assert.equal(calls, 2);
 });
