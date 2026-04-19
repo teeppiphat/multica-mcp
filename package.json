@@ -19,16 +19,20 @@
     "start": "node dist/server.js",
     "test": "node --experimental-strip-types tests/smoke.ts",
     "test:unit": "node --experimental-transform-types --test tests/unit.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
+    "eslint": "^10.2.1",
     "tsup": "^8.5.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.58.2"
   },
   "engines": {
     "node": ">=20"
