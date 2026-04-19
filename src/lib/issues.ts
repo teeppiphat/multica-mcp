@@ -1,24 +1,35 @@
-import { runMulticaJson } from "./multica-cli.js";
 import type { AgentTask, Issue, IssueListResponse } from "./types.js";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function resolveIssueId(idOrShortId: string): Promise<string> {
+type PageFetcher = (offset: number, limit: number) => Promise<IssueListResponse>;
+
+export async function resolveIssueId(
+  idOrShortId: string,
+  fetchPage?: PageFetcher,
+): Promise<string> {
   if (UUID_RE.test(idOrShortId)) return idOrShortId;
+
+  const fetch: PageFetcher =
+    fetchPage ??
+    (async (offset, limit) => {
+      const { runMulticaJson } = await import("./multica-cli.js");
+      return runMulticaJson<IssueListResponse>([
+        "issue",
+        "list",
+        "--limit",
+        String(limit),
+        "--offset",
+        String(offset),
+      ]);
+    });
 
   let offset = 0;
   const limit = 100;
 
   while (true) {
-    const page = await runMulticaJson<IssueListResponse>([
-      "issue",
-      "list",
-      "--limit",
-      String(limit),
-      "--offset",
-      String(offset),
-    ]);
+    const page = await fetch(offset, limit);
 
     const match = page.issues.find((issue) => issue.identifier === idOrShortId);
     if (match) return match.id;
@@ -35,6 +46,7 @@ export async function resolveIssueId(idOrShortId: string): Promise<string> {
 export async function getLatestRunForIssue(
   issueId: string,
 ): Promise<AgentTask | null> {
+  const { runMulticaJson } = await import("./multica-cli.js");
   const runs = (await runMulticaJson<AgentTask[]>(["issue", "runs", issueId])) ?? [];
   if (runs.length === 0) return null;
 
@@ -44,5 +56,6 @@ export async function getLatestRunForIssue(
 }
 
 export async function getIssueById(issueId: string): Promise<Issue> {
+  const { runMulticaJson } = await import("./multica-cli.js");
   return runMulticaJson<Issue>(["issue", "get", issueId]);
 }

@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
+import { resolveIssueId } from "../src/lib/issues.ts";
+
 import { TtlCache } from "../src/lib/cache.ts";
 import {
   buildAgentCreateArgs,
@@ -211,4 +213,78 @@ test("buildAutopilotTriggerDeleteArgs: uses trigger-delete subcommand", () => {
     }),
     ["autopilot", "trigger-delete", "auto-123", "trigger-456"],
   );
+});
+
+// --- resolveIssueId ---
+
+const FAKE_UUID = "11111111-2222-3333-4444-555555555555";
+const OTHER_UUID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+
+function makePage(issues: Array<{ id: string; identifier: string }>, has_more = false) {
+  return {
+    issues: issues.map((i) => ({
+      ...i,
+      number: 1,
+      title: "t",
+      description: null,
+      status: "todo",
+      priority: "medium",
+      assignee_id: null,
+      assignee_type: null,
+      project_id: null,
+      parent_issue_id: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    })),
+    total: issues.length,
+    limit: 100,
+    offset: 0,
+    has_more,
+  };
+}
+
+test("resolveIssueId: UUID passthrough — no fetch call", async () => {
+  let called = false;
+  const result = await resolveIssueId(FAKE_UUID, async () => {
+    called = true;
+    return makePage([]);
+  });
+  assert.equal(result, FAKE_UUID);
+  assert.equal(called, false);
+});
+
+test("resolveIssueId: short ID resolves to UUID", async () => {
+  const fetcher = async () =>
+    makePage([{ id: OTHER_UUID, identifier: "KOR-123" }]);
+  const result = await resolveIssueId("KOR-123", fetcher);
+  assert.equal(result, OTHER_UUID);
+});
+
+test("resolveIssueId: invalid ID format throws", async () => {
+  const fetcher = async () => makePage([]);
+  await assert.rejects(
+    () => resolveIssueId("not-valid-id", fetcher),
+    /not found/,
+  );
+});
+
+test("resolveIssueId: short ID not in list throws", async () => {
+  const fetcher = async () =>
+    makePage([{ id: OTHER_UUID, identifier: "KOR-999" }]);
+  await assert.rejects(
+    () => resolveIssueId("KOR-123", fetcher),
+    /Issue "KOR-123" not found/,
+  );
+});
+
+test("resolveIssueId: paginates until has_more false", async () => {
+  let calls = 0;
+  const fetcher = async (offset: number) => {
+    calls++;
+    if (offset === 0) return makePage([{ id: "x", identifier: "KOR-000" }], true);
+    return makePage([{ id: OTHER_UUID, identifier: "KOR-123" }], false);
+  };
+  const result = await resolveIssueId("KOR-123", fetcher);
+  assert.equal(result, OTHER_UUID);
+  assert.equal(calls, 2);
 });
