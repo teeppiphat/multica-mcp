@@ -1,0 +1,9 @@
+.DS_Store
+dist/
+logs/
+node_modules/
+skill/
+.env
+.env.*
+*.local
+coverage/
