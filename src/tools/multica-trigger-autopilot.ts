@@ -1,11 +1,8 @@
-import { z } from "zod";
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { multicaTriggerAutopilotSchema } from "../lib/autopilot-input-schemas.js";
 
-export const multicaTriggerAutopilotSchema = z.object({
-  autopilot_id: z.string().min(1),
-});
-
-export type MulticaTriggerAutopilotInput = z.infer<typeof multicaTriggerAutopilotSchema>;
+export { multicaTriggerAutopilotSchema };
+export type MulticaTriggerAutopilotInput = import("zod").infer<typeof multicaTriggerAutopilotSchema>;
 
 export async function multicaTriggerAutopilot(input: MulticaTriggerAutopilotInput) {
   return runMulticaJson(["autopilot", "trigger", input.autopilot_id]);

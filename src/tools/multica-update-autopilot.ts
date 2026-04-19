@@ -1,22 +1,9 @@
-import { z } from "zod";
 import { runMulticaJson } from "../lib/multica-cli.js";
 import type { Autopilot } from "../lib/types.js";
+import { multicaUpdateAutopilotSchema } from "../lib/autopilot-input-schemas.js";
 
-const STATUSES = ["active", "paused"] as const;
-const PRIORITIES = ["none", "low", "medium", "high", "urgent"] as const;
-
-export const multicaUpdateAutopilotSchema = z.object({
-  autopilot_id: z.string().min(1),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  status: z.enum(STATUSES).optional(),
-  agent: z.string().optional(),
-  priority: z.enum(PRIORITIES).optional(),
-  issue_title_template: z.string().optional(),
-  project: z.string().optional(),
-});
-
-export type MulticaUpdateAutopilotInput = z.infer<typeof multicaUpdateAutopilotSchema>;
+export { multicaUpdateAutopilotSchema };
+export type MulticaUpdateAutopilotInput = import("zod").infer<typeof multicaUpdateAutopilotSchema>;
 
 export async function multicaUpdateAutopilot(input: MulticaUpdateAutopilotInput) {
   const { autopilot_id, ...fields } = input;

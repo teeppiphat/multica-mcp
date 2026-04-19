@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
+import {
+  multicaDeleteAutopilotSchema,
+  multicaGetAutopilotSchema,
+  multicaTriggerAutopilotSchema,
+  multicaUpdateAutopilotSchema,
+} from "../src/lib/autopilot-input-schemas.ts";
 import { resolveIssueId } from "../src/lib/issues.ts";
-import { multicaDeleteAutopilotSchema } from "../src/tools/multica-delete-autopilot.ts";
-import { multicaGetAutopilotSchema } from "../src/tools/multica-get-autopilot.ts";
-import { multicaTriggerAutopilotSchema } from "../src/tools/multica-trigger-autopilot.ts";
-import { multicaUpdateAutopilotSchema } from "../src/tools/multica-update-autopilot.ts";
 
 import { TtlCache } from "../src/lib/cache.ts";
 import {

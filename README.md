@@ -246,7 +246,7 @@ Returns the autopilots defined in the workspace.
 
 ### `multica_get_autopilot`
 
-Returns a single autopilot with its triggers and history.
+Returns a single autopilot with its triggers.
 
 ```json
 { "autopilot_id": "<uuid>" }
