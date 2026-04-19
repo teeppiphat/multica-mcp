@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { buildIssueRunMessagesArgs } from "../lib/cli-arg-builders.js";
 import { runMulticaJson } from "../lib/multica-cli.js";
 
 export const multicaIssueRunMessagesSchema = z.object({
@@ -13,8 +14,8 @@ export type MulticaIssueRunMessagesInput = z.infer<
 export async function multicaIssueRunMessages(
   input: MulticaIssueRunMessagesInput,
 ) {
-  const args = ["issue", "run-messages", input.task_id];
-  if (input.since !== undefined) args.push("--since", String(input.since));
-  const messages = (await runMulticaJson<unknown[]>(args)) ?? [];
+  const messages = (await runMulticaJson<unknown[]>(
+    buildIssueRunMessagesArgs(input),
+  )) ?? [];
   return { items: messages, count: messages.length };
 }

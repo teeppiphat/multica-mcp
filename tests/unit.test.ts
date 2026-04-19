@@ -2,15 +2,22 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
 import { resolveIssueId } from "../src/lib/issues.ts";
+import { multicaDeleteAutopilotSchema } from "../src/tools/multica-delete-autopilot.ts";
+import { multicaGetAutopilotSchema } from "../src/tools/multica-get-autopilot.ts";
+import { multicaTriggerAutopilotSchema } from "../src/tools/multica-trigger-autopilot.ts";
+import { multicaUpdateAutopilotSchema } from "../src/tools/multica-update-autopilot.ts";
 
 import { TtlCache } from "../src/lib/cache.ts";
 import {
+  buildAttachmentDownloadArgs,
   buildAgentCreateArgs,
   buildAgentUpdateArgs,
   buildAutopilotTriggerAddArgs,
   buildAutopilotTriggerDeleteArgs,
   buildAutopilotTriggerUpdateArgs,
+  buildIssueRunMessagesArgs,
 } from "../src/lib/cli-arg-builders.ts";
+import { parseAttachmentDownloadPath } from "../src/lib/attachment-download.ts";
 import { closestMatch, levenshtein } from "../src/lib/fuzzy.ts";
 import { extractModelHint } from "../src/lib/model-hint.ts";
 
@@ -213,6 +220,63 @@ test("buildAutopilotTriggerDeleteArgs: uses trigger-delete subcommand", () => {
     }),
     ["autopilot", "trigger-delete", "auto-123", "trigger-456"],
   );
+});
+
+test("buildIssueRunMessagesArgs: includes since when provided", () => {
+  assert.deepEqual(
+    buildIssueRunMessagesArgs({
+      task_id: "task-123",
+      since: 42,
+    }),
+    ["issue", "run-messages", "task-123", "--since", "42"],
+  );
+});
+
+test("buildIssueRunMessagesArgs: omits since when absent", () => {
+  assert.deepEqual(
+    buildIssueRunMessagesArgs({
+      task_id: "task-123",
+    }),
+    ["issue", "run-messages", "task-123"],
+  );
+});
+
+test("buildAttachmentDownloadArgs: includes output_dir when provided", () => {
+  assert.deepEqual(
+    buildAttachmentDownloadArgs({
+      attachment_id: "attachment-123",
+      output_dir: "/tmp/with spaces",
+    }),
+    ["attachment", "download", "attachment-123", "-o", "/tmp/with spaces"],
+  );
+});
+
+test("parseAttachmentDownloadPath: preserves spaces in returned path", () => {
+  assert.equal(
+    parseAttachmentDownloadPath("/tmp/My Report.pdf\n"),
+    "/tmp/My Report.pdf",
+  );
+});
+
+test("parseAttachmentDownloadPath: uses the last non-empty line", () => {
+  assert.equal(
+    parseAttachmentDownloadPath("\n/tmp/downloads/Quarterly Notes.txt\n\n"),
+    "/tmp/downloads/Quarterly Notes.txt",
+  );
+});
+
+test("autopilot schemas: get/update/delete/trigger require autopilot_id", () => {
+  const schemas = [
+    multicaGetAutopilotSchema,
+    multicaUpdateAutopilotSchema,
+    multicaDeleteAutopilotSchema,
+    multicaTriggerAutopilotSchema,
+  ];
+
+  for (const schema of schemas) {
+    assert.doesNotThrow(() => schema.parse({ autopilot_id: "auto-123" }));
+    assert.throws(() => schema.parse({ id: "auto-123" }), /autopilot_id/);
+  }
 });
 
 // --- resolveIssueId ---

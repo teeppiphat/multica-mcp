@@ -143,3 +143,29 @@ export function buildAutopilotTriggerDeleteArgs(
 ): string[] {
   return ["autopilot", "trigger-delete", input.autopilot_id, input.trigger_id];
 }
+
+export type IssueRunMessagesArgsInput = {
+  task_id: string;
+  since?: number;
+};
+
+export function buildIssueRunMessagesArgs(
+  input: IssueRunMessagesArgsInput,
+): string[] {
+  const args = ["issue", "run-messages", input.task_id];
+  if (input.since !== undefined) args.push("--since", String(input.since));
+  return args;
+}
+
+export type AttachmentDownloadArgsInput = {
+  attachment_id: string;
+  output_dir?: string;
+};
+
+export function buildAttachmentDownloadArgs(
+  input: AttachmentDownloadArgsInput,
+): string[] {
+  const args = ["attachment", "download", input.attachment_id];
+  if (input.output_dir) args.push("-o", input.output_dir);
+  return args;
+}

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { parseAttachmentDownloadPath } from "../lib/attachment-download.js";
+import { buildAttachmentDownloadArgs } from "../lib/cli-arg-builders.js";
 import { runMulticaRaw } from "../lib/multica-cli.js";
 
 export const multicaAttachmentDownloadSchema = z.object({
@@ -13,9 +15,7 @@ export type MulticaAttachmentDownloadInput = z.infer<
 export async function multicaAttachmentDownload(
   input: MulticaAttachmentDownloadInput,
 ) {
-  const args = ["attachment", "download", input.attachment_id];
-  if (input.output_dir) args.push("-o", input.output_dir);
-  const output = await runMulticaRaw(args);
-  const path = output.trim().split(/\s+/).pop() ?? output.trim();
+  const output = await runMulticaRaw(buildAttachmentDownloadArgs(input));
+  const path = parseAttachmentDownloadPath(output);
   return { path, attachment_id: input.attachment_id };
 }
