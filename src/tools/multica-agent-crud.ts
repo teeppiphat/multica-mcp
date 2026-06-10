@@ -5,7 +5,34 @@ import {
   buildAgentCreateArgs,
   buildAgentUpdateArgs,
 } from "../lib/cli-arg-builders.js";
-import type { Agent } from "../lib/types.js";
+
+// The raw `agent create`/`agent update` payload includes mcp_config and
+// custom_env, which can carry secrets (API keys, passwords). Project through a
+// secret-free allowlist so nothing sensitive reaches the model context or logs.
+const SAFE_AGENT_FIELDS = [
+  "id",
+  "name",
+  "description",
+  "instructions",
+  "runtime_id",
+  "runtime_mode",
+  "status",
+  "visibility",
+  "custom_args",
+  "max_concurrent_tasks",
+  "created_at",
+  "updated_at",
+  "archived_at",
+] as const;
+
+function toSafeAgent(agent: unknown): Record<string, unknown> {
+  const raw = (agent ?? {}) as Record<string, unknown>;
+  const safe: Record<string, unknown> = {};
+  for (const key of SAFE_AGENT_FIELDS) {
+    if (raw[key] !== undefined) safe[key] = raw[key];
+  }
+  return safe;
+}
 
 export const multicaAgentCreateSchema = z.object({
   name: z.string().min(1),
@@ -21,9 +48,9 @@ export const multicaAgentCreateSchema = z.object({
 export type MulticaAgentCreateInput = z.infer<typeof multicaAgentCreateSchema>;
 
 export async function multicaAgentCreate(input: MulticaAgentCreateInput) {
-  const agent = await runMulticaJson<Agent>(buildAgentCreateArgs(input));
+  const agent = await runMulticaJson(buildAgentCreateArgs(input));
   invalidateAgentsCache();
-  return agent;
+  return toSafeAgent(agent);
 }
 
 export const multicaAgentUpdateSchema = z.object({
@@ -42,7 +69,7 @@ export const multicaAgentUpdateSchema = z.object({
 export type MulticaAgentUpdateInput = z.infer<typeof multicaAgentUpdateSchema>;
 
 export async function multicaAgentUpdate(input: MulticaAgentUpdateInput) {
-  const agent = await runMulticaJson<Agent>(buildAgentUpdateArgs(input));
+  const agent = await runMulticaJson(buildAgentUpdateArgs(input));
   invalidateAgentsCache();
-  return agent;
+  return toSafeAgent(agent);
 }

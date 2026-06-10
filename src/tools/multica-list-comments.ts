@@ -26,17 +26,24 @@ export async function multicaListComments(
   input: MulticaListCommentsInput,
 ): Promise<ListResult<CommentSummary>> {
   const issueId = await resolveIssueId(input.issue_id);
+  // `issue comment list` uses cursor pagination (--before/--before-id), not
+  // --limit/--offset. It returns a flat array, so we apply offset/limit
+  // client-side and pass only the natively-supported --since filter.
   const args = ["issue", "comment", "list", issueId];
-  if (input.limit) args.push("--limit", String(input.limit));
-  if (input.offset) args.push("--offset", String(input.offset));
   if (input.since) args.push("--since", input.since);
 
-  const [comments, agents] = await Promise.all([
+  const [allComments, agents] = await Promise.all([
     runMulticaJson<Comment[]>(args),
     getAgentsCached(),
   ]);
 
-  if (!comments || comments.length === 0) {
+  const offset = input.offset ?? 0;
+  const comments = (allComments ?? []).slice(
+    offset,
+    input.limit !== undefined ? offset + input.limit : undefined,
+  );
+
+  if (comments.length === 0) {
     return { items: [], state: "empty", message: "No comments match." };
   }
 
