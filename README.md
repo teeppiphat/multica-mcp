@@ -407,6 +407,99 @@ codex mcp get multica
 
 The Codex app reuses the Codex CLI configuration. As long as `~/.codex/config.toml` contains the `multica` entry, there is nothing else to wire up.
 
+## Remote setup (driving a remote Multica over SSH)
+
+The server spawns `multica` as a local subprocess, and the `multica` CLI talks
+to a daemon on the **same machine**. So the MCP server must run wherever the
+Multica daemon and runtimes live. If you want to use a desktop client (Claude
+Desktop / Codex Desktop) on a **different** machine than the Multica host, run
+the server **on the host** and connect to it over SSH stdio — the MCP protocol
+is just JSON-RPC over stdin/stdout, which SSH pipes transparently.
+
+```
+┌─ client machine ──────────────┐          ┌─ Multica host ───────────────────┐
+│  Claude Desktop / Claude Code  │          │                                   │
+│        │ spawn                 │   ssh    │   run-mcp.sh → node server.js     │
+│        └─ ssh ──────stdio──────┼─────────▶│        │ spawn("multica")          │
+│        (JSON-RPC over pipe)    │          │        └─ multica → daemon →       │
+└────────────────────────────────┘          │             runtimes (local)      │
+                                             └───────────────────────────────────┘
+```
+
+### 1. On the Multica host
+
+Clone, install, and build as usual, then add a small launcher that fixes `PATH`
+(so `multica` and `node` are found regardless of the SSH login environment) and
+picks the newest nvm-installed node:
+
+```sh
+# ~/multica-mcp/run-mcp.sh
+#!/bin/sh
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+[ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+exec node "$HOME/multica-mcp/dist/server.js"
+```
+
+```bash
+chmod +x ~/multica-mcp/run-mcp.sh
+```
+
+(If `node` is installed globally rather than via nvm, just point `PATH` at its
+directory and `exec node …` — the launcher only needs to make `node` and
+`multica` resolvable.)
+
+### 2. SSH prerequisites (on the client machine)
+
+- **Key-based, passwordless auth** to the host — a GUI client cannot type a
+  password or key passphrase. Test with `ssh -o BatchMode=yes <host> true`.
+- The host's key must already be in `~/.ssh/known_hosts`
+  (`ssh-keyscan -t ed25519 <host-ip> >> ~/.ssh/known_hosts`), otherwise the
+  non-interactive `ssh` fails on host-key verification.
+- The host must be **reachable**. On a LAN, an mDNS `*.local` name may not
+  resolve reliably — prefer the host's IP (ideally a DHCP reservation or static
+  IP) in your `~/.ssh/config`:
+
+  ```
+  Host multica-host
+      HostName <host-ip>
+      User <remote-user>
+      IdentityFile ~/.ssh/<your-key>
+  ```
+
+- The remote login shell must not print to **stdout** (banners/MOTD corrupt the
+  JSON-RPC stream). Verify with `ssh <host> 'printf X'` — it must print exactly
+  `X`. Most shells are fine; if not, move noisy output to stderr in your rc.
+
+### 3. Register the MCP in the client
+
+The client runs `ssh` (which lives in `/usr/bin`, always on the GUI `PATH`)
+instead of `node` directly.
+
+Claude Code:
+
+```bash
+claude mcp add-json --scope user multica \
+  '{"type":"stdio","command":"ssh","args":["-T","-o","BatchMode=yes","multica-host","~/multica-mcp/run-mcp.sh"]}'
+```
+
+Claude Desktop / Codex Desktop (`mcpServers` entry):
+
+```json
+{
+  "mcpServers": {
+    "multica": {
+      "command": "ssh",
+      "args": ["-T", "-o", "BatchMode=yes", "multica-host", "~/multica-mcp/run-mcp.sh"]
+    }
+  }
+}
+```
+
+Replace `multica-host` with your `~/.ssh/config` alias. The client machine must
+be on the same network as the host (or reach it via VPN/tunnel) while in use,
+and the Multica daemon must be running on the host.
+
 ## Known limitations
 
 - Source of truth for the billed model is `multica runtime usage`, not the agent self-report
