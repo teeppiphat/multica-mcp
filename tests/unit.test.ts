@@ -11,6 +11,7 @@ import { resolveIssueId } from "../src/lib/issues.ts";
 
 import { TtlCache } from "../src/lib/cache.ts";
 import {
+  assertOperand,
   buildAttachmentDownloadArgs,
   buildAgentCreateArgs,
   buildAgentUpdateArgs,
@@ -353,4 +354,35 @@ test("resolveIssueId: paginates until has_more false", async () => {
   const result = await resolveIssueId("ABC-123", fetcher);
   assert.equal(result, OTHER_UUID);
   assert.equal(calls, 2);
+});
+
+test("assertOperand: returns value for normal ids", () => {
+  assert.equal(assertOperand("ABC-12", "issue_id"), "ABC-12");
+  assert.equal(
+    assertOperand("abf1888a-dbeb-4117-b995-de98da322590", "agent_id"),
+    "abf1888a-dbeb-4117-b995-de98da322590",
+  );
+});
+
+test("assertOperand: rejects flag-like values (argument injection)", () => {
+  assert.throws(() => assertOperand("--help", "agent_id"), /must not start with/);
+  assert.throws(() => assertOperand("-o", "task_id"), /must not start with/);
+});
+
+test("buildAgentUpdateArgs: rejects flag-like agent_id", () => {
+  assert.throws(
+    () => buildAgentUpdateArgs({ agent_id: "--status", name: "x" }),
+    /must not start with/,
+  );
+});
+
+test("buildAutopilotTriggerDeleteArgs: rejects flag-like ids", () => {
+  assert.throws(
+    () =>
+      buildAutopilotTriggerDeleteArgs({
+        autopilot_id: "--force",
+        trigger_id: "t1",
+      }),
+    /must not start with/,
+  );
 });

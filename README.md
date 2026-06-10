@@ -24,6 +24,17 @@ If you spend your thinking time in an LLM chat (Claude Desktop, Codex Desktop, o
 - Multica daemon running
 - Node.js 20+
 - `pnpm`
+- `node`, `multica`, and the Multica daemon must all be on the **same machine**
+  as the MCP client — the server spawns `multica` as a local subprocess.
+
+> **macOS GUI clients: `multica` not found.** Claude Desktop and Codex Desktop
+> are launched by `launchd` with a minimal `PATH` that omits Homebrew dirs
+> (`/usr/local/bin` on Intel, `/opt/homebrew/bin` on Apple Silicon). Because the
+> server calls `spawn("multica")` and resolves it via `PATH`, it will fail at
+> startup with a `not_found` error even when `multica` is correctly installed.
+> Fix it by passing an explicit `PATH` in the client config `env` (shown below).
+> CLI clients launched from your shell inherit your interactive `PATH` and are
+> usually unaffected.
 
 ## Build
 
@@ -41,7 +52,7 @@ cd /path/to/multica-mcp && pnpm start
 
 ## Logs
 
-Tool calls are logged as JSONL with `timestamp`, `tool`, `params`, `duration_ms`, `success`, and `error` when relevant. The log file is resolved in this order:
+Tool calls are logged as JSONL with `timestamp`, `tool`, `params`, `duration_ms`, `success`, and `error` when relevant. Potentially sensitive parameters (`instructions`, `description`, `content`, `runtime_config`, `custom_env`, `custom_args`) are redacted and long strings are truncated before they are written, so the log is safe(r) to share. The log file is resolved in this order:
 
 1. `MULTICA_MCP_LOG_PATH` environment variable (absolute path)
 2. `$XDG_STATE_HOME/multica-mcp/calls.log`
@@ -341,12 +352,16 @@ Local MCP servers for Claude Desktop are declared in `claude_desktop_config.json
   "mcpServers": {
     "multica": {
       "command": "node",
-      "args": ["/absolute/path/to/multica-mcp/dist/server.js"]
+      "args": ["/absolute/path/to/multica-mcp/dist/server.js"],
+      "env": { "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin" }
     }
   }
 }
 ```
 
+The `env.PATH` entry is required so the GUI-launched client can find the
+`multica` binary (see the note under [Requirements](#requirements)). Adjust the
+directories to wherever `multica` and `node` live (`dirname $(which multica)`).
 Restart Claude Desktop afterwards.
 
 ### Claude Code
@@ -354,7 +369,7 @@ Restart Claude Desktop afterwards.
 Claude Code exposes `claude mcp add-json` with `--scope user`:
 
 ```bash
-claude mcp add-json --scope user multica '{"type":"stdio","command":"node","args":["/absolute/path/to/multica-mcp/dist/server.js"]}'
+claude mcp add-json --scope user multica '{"type":"stdio","command":"node","args":["/absolute/path/to/multica-mcp/dist/server.js"],"env":{"PATH":"/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"}}'
 ```
 
 This entry is persisted in `~/.claude.json`.
@@ -373,6 +388,7 @@ Codex CLI loads its configuration from `~/.codex/config.toml`:
 [mcp_servers.multica]
 command = "node"
 args = [ "/absolute/path/to/multica-mcp/dist/server.js" ]
+env = { PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin" }
 ```
 
 Equivalent CLI command:

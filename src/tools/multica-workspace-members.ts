@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { assertOperand } from "../lib/cli-arg-builders.js";
 import type { ListResult } from "../lib/types.js";
 
 export const multicaWorkspaceMembersSchema = z.object({
@@ -22,7 +23,7 @@ export async function multicaWorkspaceMembers(
   input: MulticaWorkspaceMembersInput,
 ): Promise<ListResult<Member>> {
   const args = ["workspace", "member", "list"];
-  if (input.workspace_id) args.push(input.workspace_id);
+  if (input.workspace_id) args.push(assertOperand(input.workspace_id, "workspace_id"));
   const members = (await runMulticaJson<Member[]>(args)) ?? [];
   if (members.length === 0) {
     return { items: [], state: "empty", message: "No members found." };

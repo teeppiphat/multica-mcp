@@ -127,6 +127,35 @@ const logger = new JsonlLogger(resolveLogPath());
 
 type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
+// Values that may carry secrets or large/sensitive free text. The JSONL log is
+// a debugging aid, not an audit trail, so we redact these before writing.
+const REDACTED_PARAM_KEYS = new Set([
+  "instructions",
+  "description",
+  "content",
+  "runtime_config",
+  "custom_env",
+  "custom_args",
+]);
+const MAX_LOGGED_STRING = 200;
+
+function redactParams(params: unknown): unknown {
+  if (!params || typeof params !== "object" || Array.isArray(params)) {
+    return params;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+    if (REDACTED_PARAM_KEYS.has(key)) {
+      out[key] = "[redacted]";
+    } else if (typeof value === "string" && value.length > MAX_LOGGED_STRING) {
+      out[key] = `${value.slice(0, MAX_LOGGED_STRING)}…(${value.length} chars)`;
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 function toolResult(data: unknown) {
   return {
     content: [{ type: "text" as const, text: JSON.stringify(data) }],
@@ -169,7 +198,7 @@ function wrap<I>(
       const out = await fn(input);
       logger.log({
         tool: name,
-        params: input,
+        params: redactParams(input),
         duration_ms: Date.now() - t0,
         success: true,
       });
@@ -178,7 +207,7 @@ function wrap<I>(
     } catch (err) {
       logger.log({
         tool: name,
-        params: input,
+        params: redactParams(input),
         duration_ms: Date.now() - t0,
         success: false,
         error: err instanceof Error ? err.message : String(err),

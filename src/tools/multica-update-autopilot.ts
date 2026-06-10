@@ -1,4 +1,5 @@
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { assertOperand } from "../lib/cli-arg-builders.js";
 import type { Autopilot } from "../lib/types.js";
 import { multicaUpdateAutopilotSchema } from "../lib/autopilot-input-schemas.js";
 
@@ -7,7 +8,7 @@ export type MulticaUpdateAutopilotInput = import("zod").infer<typeof multicaUpda
 
 export async function multicaUpdateAutopilot(input: MulticaUpdateAutopilotInput) {
   const { autopilot_id, ...fields } = input;
-  const args = ["autopilot", "update", autopilot_id];
+  const args = ["autopilot", "update", assertOperand(autopilot_id, "autopilot_id")];
   if (fields.title) args.push("--title", fields.title);
   if (fields.description) args.push("--description", fields.description);
   if (fields.status) args.push("--status", fields.status);

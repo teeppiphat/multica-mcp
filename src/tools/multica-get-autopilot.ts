@@ -1,4 +1,5 @@
 import { runMulticaJson } from "../lib/multica-cli.js";
+import { assertOperand } from "../lib/cli-arg-builders.js";
 import type { AutopilotGetResponse } from "../lib/types.js";
 import { multicaGetAutopilotSchema } from "../lib/autopilot-input-schemas.js";
 
@@ -9,6 +10,6 @@ export async function multicaGetAutopilot(input: MulticaGetAutopilotInput) {
   return runMulticaJson<AutopilotGetResponse>([
     "autopilot",
     "get",
-    input.autopilot_id,
+    assertOperand(input.autopilot_id, "autopilot_id"),
   ]);
 }

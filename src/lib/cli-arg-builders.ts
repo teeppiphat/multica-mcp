@@ -1,6 +1,22 @@
 type AgentVisibility = "workspace" | "private";
 type AgentStatus = "active" | "paused" | "archived";
 
+/**
+ * Guard against argument injection.
+ *
+ * The CLI is invoked via spawn (no shell), so shell metacharacters are inert.
+ * But a user-controlled value used as a POSITIONAL operand that begins with "-"
+ * would be parsed by the multica CLI as a flag rather than an operand. Real ids
+ * (UUIDs, short ids like "ABC-12") never start with "-", so we reject such
+ * values up front. Returns the value so it can be used inline.
+ */
+export function assertOperand(value: string, field: string): string {
+  if (value.startsWith("-")) {
+    throw new Error(`Invalid ${field}: value must not start with "-".`);
+  }
+  return value;
+}
+
 function stringifyFlag(value: unknown): string {
   return JSON.stringify(value);
 }
@@ -56,7 +72,7 @@ export type AgentUpdateArgsInput = {
 };
 
 export function buildAgentUpdateArgs(input: AgentUpdateArgsInput): string[] {
-  const args = ["agent", "update", input.agent_id];
+  const args = ["agent", "update", assertOperand(input.agent_id, "agent_id")];
 
   if (input.name) args.push("--name", input.name);
   if (input.description !== undefined) args.push("--description", input.description);
@@ -94,7 +110,7 @@ export function buildAutopilotTriggerAddArgs(
   const args = [
     "autopilot",
     "trigger-add",
-    input.autopilot_id,
+    assertOperand(input.autopilot_id, "autopilot_id"),
     "--cron",
     input.cron,
   ];
@@ -118,8 +134,8 @@ export function buildAutopilotTriggerUpdateArgs(
   const args = [
     "autopilot",
     "trigger-update",
-    input.autopilot_id,
-    input.trigger_id,
+    assertOperand(input.autopilot_id, "autopilot_id"),
+    assertOperand(input.trigger_id, "trigger_id"),
   ];
   if (input.cron) args.push("--cron", input.cron);
   if (input.label) args.push("--label", input.label);
@@ -141,7 +157,12 @@ export type AutopilotTriggerDeleteArgsInput = {
 export function buildAutopilotTriggerDeleteArgs(
   input: AutopilotTriggerDeleteArgsInput,
 ): string[] {
-  return ["autopilot", "trigger-delete", input.autopilot_id, input.trigger_id];
+  return [
+    "autopilot",
+    "trigger-delete",
+    assertOperand(input.autopilot_id, "autopilot_id"),
+    assertOperand(input.trigger_id, "trigger_id"),
+  ];
 }
 
 export type IssueRunMessagesArgsInput = {
@@ -152,7 +173,7 @@ export type IssueRunMessagesArgsInput = {
 export function buildIssueRunMessagesArgs(
   input: IssueRunMessagesArgsInput,
 ): string[] {
-  const args = ["issue", "run-messages", input.task_id];
+  const args = ["issue", "run-messages", assertOperand(input.task_id, "task_id")];
   if (input.since !== undefined) args.push("--since", String(input.since));
   return args;
 }
@@ -165,7 +186,11 @@ export type AttachmentDownloadArgsInput = {
 export function buildAttachmentDownloadArgs(
   input: AttachmentDownloadArgsInput,
 ): string[] {
-  const args = ["attachment", "download", input.attachment_id];
+  const args = [
+    "attachment",
+    "download",
+    assertOperand(input.attachment_id, "attachment_id"),
+  ];
   if (input.output_dir) args.push("-o", input.output_dir);
   return args;
 }
